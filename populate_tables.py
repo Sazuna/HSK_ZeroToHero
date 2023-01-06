@@ -3,11 +3,16 @@ import sqlite3
 import csv
 import re
 
+#
+# Global var
+#
+db = sqlite3.connect("HSK.db")
+db.text_factory = str
+cursor = db.cursor()
+
 def addDefinition(definition, vocId):
 	if (definition[:3] == "CL:"):
 		definition = definition[3:]
-		# print(definition)
-		# print("Classifier !")
 		classifiers = definition.split(',')
 		for classifier in classifiers:
 			addClassifier(classifier, vocId)		
@@ -15,13 +20,11 @@ def addDefinition(definition, vocId):
 	try:
 		request = f"INSERT INTO Definition(definition)\
 		VALUES ('{definition}')"
-		# print(request)
 		cursor.execute(request)
 		request = "SELECT last_insert_rowid()"
 		cursor.execute(request)
 		defId = cursor.fetchall()[0][0]
 	except Exception:
-		# print(definition, "déjà existant")
 		request = f"SELECT defId\
 		FROM Definition\
 		WHERE definition = '{definition}'"
@@ -34,20 +37,27 @@ def addDefinition(definition, vocId):
 		VALUES ('{vocId}', '{defId}')"
 		cursor.execute(request)
 	except Exception:
-		print(definition)
+		pass
 
 	# Get the other words with the same definitions and add synonyms
 	request = f"SELECT vocId\
 	FROM VocDef\
-	WHERE defId = '{defId}'"
+	WHERE defId = '{defId}'\
+	AND vocId != '{vocId}'"
 	cursor.execute(request)
 	response = cursor.fetchall()
-	# print(response)
 	for voc in response:
 		vocId2 = voc[0]
 		if (vocId2 != vocId):
-			request = f"INSERT INTO Synonym (word1, word2)\
-			VALUES('{vocId}', '{vocId2}')"
+			try:
+				request = f"INSERT INTO Synonym (word1, word2)\
+				VALUES('{vocId}', '{vocId2}')"
+				cursor.execute(request)
+				request = f"INSERT INTO Synonym (word2, word1)\
+				VALUES('{vocId}', '{vocId2}')"
+				cursor.execute(request)
+			except Exception:
+				pass
 
 def addClassifier(classifier, vocId):
 	pinyin = classifier[classifier.find('[')+1:classifier.find(']')]
@@ -57,26 +67,22 @@ def addClassifier(classifier, vocId):
 		simplified = characters[1]
 	else:
 		simplified = traditional
-	# print(pinyin, simplified, traditional)
 	try:
 		request = f"INSERT INTO Classifier\
 		(simplified, traditional, pinyin)\
 		VALUES('{simplified}', '{traditional}', '{pinyin}')"
-		# print(request)
 		cursor.execute(request)
 	except Exception:
-		# print("déjà le classificateur dedans")
 		pass
 	request = f"SELECT clId\
 	FROM Classifier\
-	WHERE traditional = traditional\
-	AND pinyin = pinyin\
-	AND simplified = simplified"
+	WHERE traditional = '{traditional}'\
+	AND pinyin = '{pinyin}'\
+	AND simplified = '{simplified}'"
 	cursor.execute(request)
 	clId = cursor.fetchall()[0]
 	request = f"INSERT INTO VocClassifier (vocId, clId)\
 	VALUES ('{vocId}', '{clId}')"
-	# print(request)
 	cursor.execute(request)
 
 def escapeChars(string):
@@ -88,14 +94,20 @@ def addVocabulary(simplified, traditional, pinyin, hsk, weight):
 	request = f"INSERT INTO Vocabulary\
 	(simplified, traditional, pinyin, hsk, weight)\
 	VALUES ('{simplified}', '{traditional}', '{pinyin}', '{hsk}', '{weight}')"
-	# print(request)
 	cursor.execute(request)
-	
+	request = "SELECT last_insert_rowid()"
+	cursor.execute(request)
+	vocId = cursor.fetchall()[0][0]
+	return vocId
 
-# Create the database
-db = sqlite3.connect("HSK.db")
-db.text_factory = str
-cursor = db.cursor()
+def addCharacter(simplified, traditional):
+	try:
+		request = f"INSERT INTO Character\
+		(simplified, traditional)\
+		VALUES ('{simplified}', '{traditional}')"
+		cursor.execute(request)
+	except Exception:
+		pass # Already in
 
 def main():
 	with open("data/hsk.csv") as csvfile:
@@ -106,18 +118,19 @@ def main():
 			traditional = escapeChars(row['traditional'])
 			pinyin = escapeChars(row['pinyin'])
 			#definitions = row['definitions'].split('/')
-			definitions = re.split('/;', row['definitions'])
+			definitions = re.split('/|;', row['definitions'])
 			hsk = row['hsk']
 			example = escapeChars(row['example'])
 			exampleTranslation = escapeChars(row['exampleTranslation'])
 			weight = row['weight']
-			addVocabulary(simplified, traditional, pinyin, hsk, weight)
-			request = "SELECT last_insert_rowid()"
-			cursor.execute(request)
-			vocId = cursor.fetchall()[0][0]
+			vocId = addVocabulary(simplified, traditional, pinyin, hsk, weight)
 			for definition in definitions:
 				definition = escapeChars(definition)
 				addDefinition(definition, vocId)
+
+			for idx, sim in enumerate(simplified):
+				trad = traditional[idx]
+				addCharacter(sim, trad)
 
 	# Save transactions
 	db.commit()

@@ -51,14 +51,20 @@ def check_vocDef():
 	cursor.execute(request)
 	print(cursor.fetchall())
 
+def check_synonym():
+	request = "SELECT * FROM Synonym"
+	cursor.execute(request)
+	print(cursor.fetchall())
+
 def main():
 	#check_vocabulary()
-	check_definition()
+	#check_definition()
 	#check_example()
 	#check_wordExample()
-	#check_character()
+	check_character()
 	#check_classifier()
-	check_vocDef()
+	#check_vocDef()
+	#check_synonym()
 
 #
 # Main function

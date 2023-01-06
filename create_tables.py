@@ -9,7 +9,7 @@ cursor = db.cursor()
 
 # Table vocabulary
 request = "CREATE TABLE Vocabulary(\
-	vocId INTEGER NOT NULL PRIMARY KEY,\
+	vocId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\
 	simplified VARCHAR(4) NOT NULL,\
 	traditional VARCHAR(4) NOT NULL,\
 	pinyin VARCHAR(30) NOT NULL,\
@@ -29,13 +29,14 @@ request = "CREATE TABLE Example(\
 cursor.execute(request)
 
 request = "CREATE TABLE VocDef(\
+	vocDefId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\
 	vocId INTEGER NOT NULL,\
 	defId INTEGER NOT NULL,\
-	PRIMARY KEY (defId, vocId),\
 	FOREIGN KEY (vocId)\
 	REFERENCES Vocabulary(vocId),\
 	FOREIGN KEY (defId)\
-	REFERENCES Definition (defId))"
+	REFERENCES Definition (defId),\
+	UNIQUE(vocId, defId))"
 cursor.execute(request)
 
 request = "CREATE TABLE WordExample(\
@@ -78,6 +79,22 @@ request = "CREATE TABLE VocClassifier(\
 	REFERENCES Vocabulary(vocId),\
 	FOREIGN KEY (clId)\
 	REFERENCES Classifier(clId))"
+cursor.execute(request)
+
+request = "CREATE TABLE POS(\
+	posId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\
+	pos VARCHAR(5) NOT NULL,\
+	UNIQUE(pos))"
+cursor.execute(request)
+
+request = "CREATE TABLE vocDefPOS(\
+	vocDefId INTEGER NOT NULL,\
+	posId INTEGER NOT NULL,\
+	PRIMARY KEY (vocDefId, posId)\
+	FOREIGN KEY (vocDefId)\
+	REFERENCES VocDef(vocDefId),\
+	FOREIGN KEY (posId)\
+	REFERENCES POS(posId))"
 cursor.execute(request)
 
 # Save transactions
