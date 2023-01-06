@@ -85,11 +85,6 @@ def addClassifier(classifier, vocId):
 	VALUES ('{vocId}', '{clId}')"
 	cursor.execute(request)
 
-def escapeChars(string):
-	if string is None:
-		return None
-	return string.strip().replace("'", "''").replace('"', '""')
-
 def addVocabulary(simplified, traditional, pinyin, hsk, weight):
 	request = f"INSERT INTO Vocabulary\
 	(simplified, traditional, pinyin, hsk, weight)\
@@ -109,15 +104,18 @@ def addCharacter(simplified, traditional):
 	except Exception:
 		pass # Already in
 
+def escapeChars(string):
+	if string is None:
+		return None
+	return string.strip().replace("'", "''").replace('"', '""')
+
 def main():
 	with open("data/hsk.csv") as csvfile:
 		reader = csv.DictReader(csvfile, delimiter='@')
 		for row in reader:
-			#vocId = row['hskId']
 			simplified = escapeChars(row['simplified'])
 			traditional = escapeChars(row['traditional'])
 			pinyin = escapeChars(row['pinyin'])
-			#definitions = row['definitions'].split('/')
 			definitions = re.split('/|;', row['definitions'])
 			hsk = row['hsk']
 			example = escapeChars(row['example'])
