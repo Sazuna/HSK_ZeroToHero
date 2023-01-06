@@ -25,7 +25,8 @@ cursor.execute(request)
 request = "CREATE TABLE Example(\
 	exId INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,\
 	example TEXT NOT NULL,\
-	exampleTranslation TEXT)"
+	exampleTranslation TEXT,\
+	UNIQUE (example))"
 cursor.execute(request)
 
 request = "CREATE TABLE VocDef(\

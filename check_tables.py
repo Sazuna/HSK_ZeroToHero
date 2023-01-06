@@ -59,9 +59,9 @@ def check_synonym():
 def main():
 	#check_vocabulary()
 	#check_definition()
-	#check_example()
-	#check_wordExample()
-	check_character()
+	check_example()
+	check_wordExample()
+	#check_character()
 	#check_classifier()
 	#check_vocDef()
 	#check_synonym()

@@ -2,6 +2,7 @@
 import sqlite3
 import csv
 import re
+import thulac
 
 #
 # Global var
@@ -9,6 +10,7 @@ import re
 db = sqlite3.connect("HSK.db")
 db.text_factory = str
 cursor = db.cursor()
+seg = thulac.thulac(seg_only=True)
 
 def addDefinition(definition, vocId):
 	if (definition[:3] == "CL:"):
@@ -24,7 +26,7 @@ def addDefinition(definition, vocId):
 		request = "SELECT last_insert_rowid()"
 		cursor.execute(request)
 		defId = cursor.fetchall()[0][0]
-	except Exception:
+	except:
 		request = f"SELECT defId\
 		FROM Definition\
 		WHERE definition = '{definition}'"
@@ -36,7 +38,7 @@ def addDefinition(definition, vocId):
 		request = f"INSERT INTO VocDef (vocId, defId)\
 		VALUES ('{vocId}', '{defId}')"
 		cursor.execute(request)
-	except Exception:
+	except:
 		pass
 
 	# Get the other words with the same definitions and add synonyms
@@ -56,8 +58,31 @@ def addDefinition(definition, vocId):
 				request = f"INSERT INTO Synonym (word2, word1)\
 				VALUES('{vocId}', '{vocId2}')"
 				cursor.execute(request)
-			except Exception:
+			except:
 				pass
+
+def addExample(example, exampleTranslation):
+	try:
+		request = f"INSERT INTO Example (example, exampleTranslation)\
+		VALUES ('{example}', '{exampleTranslation}')"
+		cursor.execute(request)
+		request = "SELECT last_insert_rowid()"
+		cursor.execute(request)
+		exId = cursor.fetchall()[0][0]
+	except:
+		request = f"SELECT exId FROM Example\
+		WHERE example = '{example}'"
+		cursor.execute(request)
+		exId = cursor.fetchall()[0]
+	# for each word in example
+	exampleSeg = seg.cut(example, text=True)
+	for word in exampleSeg.split():
+		try:
+			request = f"INSERT INTO WordExample (word, exId)\
+			VALUES ('{word}', '{exId}')"
+			cursor.execute(request)
+		except:
+			pass
 
 def addClassifier(classifier, vocId):
 	pinyin = classifier[classifier.find('[')+1:classifier.find(']')]
@@ -72,7 +97,7 @@ def addClassifier(classifier, vocId):
 		(simplified, traditional, pinyin)\
 		VALUES('{simplified}', '{traditional}', '{pinyin}')"
 		cursor.execute(request)
-	except Exception:
+	except: 
 		pass
 	request = f"SELECT clId\
 	FROM Classifier\
@@ -101,7 +126,7 @@ def addCharacter(simplified, traditional):
 		(simplified, traditional)\
 		VALUES ('{simplified}', '{traditional}')"
 		cursor.execute(request)
-	except Exception:
+	except:
 		pass # Already in
 
 def escapeChars(string):
@@ -129,6 +154,9 @@ def main():
 			for idx, sim in enumerate(simplified):
 				trad = traditional[idx]
 				addCharacter(sim, trad)
+
+			if example is not None:
+				addExample(example, exampleTranslation)
 
 	# Save transactions
 	db.commit()
